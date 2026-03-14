@@ -150,3 +150,20 @@ export const messagesApi = {
   getAll: (params) => api.get('/communications/messages', { params }),
   send: (data) => api.post('/communications/messages', data)
 }
+
+// Superadmin
+export const superAdminApi = {
+  getStats: () => api.get('/superadmin/stats'),
+  // Tenants
+  listTenants: (params) => api.get('/superadmin/tenants', { params }),
+  getTenant: (id) => api.get(`/superadmin/tenants/${id}`),
+  createTenant: (data) => api.post('/superadmin/tenants', data),
+  updateTenant: (id, data) => api.patch(`/superadmin/tenants/${id}`, data),
+  activateTenant: (id) => api.post(`/superadmin/tenants/${id}/activate`),
+  deactivateTenant: (id) => api.post(`/superadmin/tenants/${id}/deactivate`),
+  deleteTenant: (id) => api.delete(`/superadmin/tenants/${id}`),
+  // Users
+  listTenantUsers: (tenantId) => api.get(`/superadmin/tenants/${tenantId}/users`),
+  setUserPassword: (userId, password) => api.patch(`/superadmin/users/${userId}/password`, { password }),
+  toggleUserActive: (userId) => api.patch(`/superadmin/users/${userId}/toggle-active`),
+}

@@ -23,15 +23,24 @@ import SettingsPage from './pages/settings/SettingsPage'
 import ProfilePage from './pages/settings/ProfilePage'
 import MessagesPage from './pages/communications/MessagesPage'
 import NotFoundPage from './pages/NotFoundPage'
+import SuperAdminPage from './pages/superadmin/SuperAdminPage'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuthStore()
   return isAuthenticated ? children : <Navigate to="/login" replace />
 }
 
+function SuperAdminRoute({ children }) {
+  const { isAuthenticated, user } = useAuthStore()
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (user?.role !== 'super_admin') return <Navigate to="/dashboard" replace />
+  return children
+}
+
 function PublicRoute({ children }) {
-  const { isAuthenticated } = useAuthStore()
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : children
+  const { isAuthenticated, user } = useAuthStore()
+  if (!isAuthenticated) return children
+  return <Navigate to={user?.role === 'super_admin' ? '/superadmin' : '/dashboard'} replace />
 }
 
 export default function App() {
@@ -63,6 +72,9 @@ export default function App() {
         <Route path="settings" element={<SettingsPage />} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
+
+      {/* Superadmin */}
+      <Route path="/superadmin" element={<SuperAdminRoute><SuperAdminPage /></SuperAdminRoute>} />
 
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

@@ -30,7 +30,7 @@ export default function LoginPage() {
       const { user, accessToken, refreshToken } = res.data.data
       login(user, accessToken, refreshToken)
       toast.success(`Welcome back, ${user.firstName}!`)
-      navigate('/dashboard')
+      navigate(user.role === 'super_admin' ? '/superadmin' : '/dashboard')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Login failed')
     } finally {

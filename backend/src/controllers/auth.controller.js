@@ -7,7 +7,6 @@ const { sendEmail, welcomeEmailTemplate, passwordResetTemplate } = require('../u
 const { logAudit } = require('../middleware/audit');
 const logger = require('../utils/logger');
 
-// Helper to create slug
 function slugify(text) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now();
 }
@@ -15,13 +14,11 @@ function slugify(text) {
 exports.register = async (req, res) => {
   const { tenantName, firstName, lastName, email, password, phone } = req.body;
   try {
-    // Check if email already used in any tenant
     const existingEmail = await query('SELECT id FROM users WHERE email = $1', [email]);
     if (existingEmail.rows.length) {
       return errorResponse(res, 'Email already registered', 409);
     }
 
-    // Create tenant
     const slug = slugify(tenantName);
     const tenantResult = await query(
       `INSERT INTO tenants (name, slug, email, phone, subscription_plan, subscription_status, trial_ends_at)
@@ -30,10 +27,8 @@ exports.register = async (req, res) => {
     );
     const tenantId = tenantResult.rows[0].id;
 
-    // Hash password
     const passwordHash = await bcrypt.hash(password, 12);
 
-    // Create admin user
     const userResult = await query(
       `INSERT INTO users (tenant_id, email, password_hash, first_name, last_name, phone, role, is_active, is_verified)
        VALUES ($1, $2, $3, $4, $5, $6, 'admin', true, true) RETURNING id, email, first_name, last_name, role`,
@@ -41,13 +36,8 @@ exports.register = async (req, res) => {
     );
     const user = userResult.rows[0];
 
-    // Create subscription record
-    await query(
-      `INSERT INTO subscriptions (tenant_id, plan, status) VALUES ($1, 'free', 'trial')`,
-      [tenantId]
-    );
+    await query(`INSERT INTO subscriptions (tenant_id, plan, status) VALUES ($1, 'free', 'trial')`, [tenantId]);
 
-    // Send welcome email (non-blocking)
     const loginUrl = `${process.env.FRONTEND_URL}/login`;
     sendEmail({
       to: email,
@@ -76,6 +66,36 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   const { email, password } = req.body;
   try {
+    // First check if this is a superadmin login (tenant_id IS NULL)
+    const superadminResult = await query(
+      `SELECT * FROM users WHERE email = $1 AND tenant_id IS NULL AND role = 'super_admin'`,
+      [email]
+    );
+
+    if (superadminResult.rows.length) {
+      const superadmin = superadminResult.rows[0];
+      if (!superadmin.is_active) return errorResponse(res, 'Account deactivated.', 401);
+
+      const isValid = await bcrypt.compare(password, superadmin.password_hash);
+      if (!isValid) return errorResponse(res, 'Invalid email or password', 401);
+
+      const accessToken = generateAccessToken({ userId: superadmin.id, tenantId: null, role: 'super_admin' });
+      const refreshToken = generateRefreshToken({ userId: superadmin.id, tenantId: null });
+
+      await query('UPDATE users SET refresh_token = $1, last_login = NOW() WHERE id = $2', [refreshToken, superadmin.id]);
+
+      return successResponse(res, {
+        user: {
+          id: superadmin.id, email: superadmin.email,
+          firstName: superadmin.first_name, lastName: superadmin.last_name,
+          role: 'super_admin', tenantId: null, tenantName: null, tenantSlug: null
+        },
+        accessToken,
+        refreshToken
+      }, 'Login successful');
+    }
+
+    // Regular tenant user login
     const result = await query(
       `SELECT u.*, t.is_active as tenant_active, t.subscription_status, t.name as tenant_name, t.slug as tenant_slug
        FROM users u JOIN tenants t ON u.tenant_id = t.id WHERE u.email = $1`,
@@ -128,8 +148,8 @@ exports.refreshToken = async (req, res) => {
     if (!result.rows.length) return errorResponse(res, 'Invalid refresh token', 401);
 
     const user = result.rows[0];
-    const newAccessToken = generateAccessToken({ userId: user.id, tenantId: user.tenant_id, role: user.role });
-    const newRefreshToken = generateRefreshToken({ userId: user.id, tenantId: user.tenant_id });
+    const newAccessToken = generateAccessToken({ userId: user.id, tenantId: user.tenant_id || null, role: user.role });
+    const newRefreshToken = generateRefreshToken({ userId: user.id, tenantId: user.tenant_id || null });
     await query('UPDATE users SET refresh_token = $1 WHERE id = $2', [newRefreshToken, user.id]);
 
     return successResponse(res, { accessToken: newAccessToken, refreshToken: newRefreshToken });
@@ -141,7 +161,14 @@ exports.refreshToken = async (req, res) => {
 exports.logout = async (req, res) => {
   try {
     await query('UPDATE users SET refresh_token = NULL WHERE id = $1', [req.user.id]);
-    await logAudit({ tenantId: req.user.tenantId, userId: req.user.id, action: 'LOGOUT', resourceType: 'user', resourceId: req.user.id, req });
+    await logAudit({
+      tenantId: req.user.tenantId,
+      userId: req.user.id,
+      action: 'LOGOUT',
+      resourceType: 'user',
+      resourceId: req.user.id,
+      req
+    });
     return successResponse(res, null, 'Logged out successfully');
   } catch (error) {
     return errorResponse(res, 'Logout failed', 500);
@@ -153,12 +180,11 @@ exports.forgotPassword = async (req, res) => {
   try {
     const result = await query('SELECT * FROM users WHERE email = $1', [email]);
     if (!result.rows.length) {
-      // Don't reveal if email exists
       return successResponse(res, null, 'If that email exists, a reset link has been sent.');
     }
     const user = result.rows[0];
     const token = crypto.randomBytes(32).toString('hex');
-    const expires = new Date(Date.now() + 3600000); // 1 hour
+    const expires = new Date(Date.now() + 3600000);
     await query('UPDATE users SET password_reset_token = $1, password_reset_expires = $2 WHERE id = $3', [token, expires, user.id]);
 
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
@@ -196,6 +222,21 @@ exports.resetPassword = async (req, res) => {
 
 exports.getMe = async (req, res) => {
   try {
+    if (req.user.role === 'super_admin') {
+      const result = await query(
+        `SELECT id, email, first_name, last_name, role, is_verified, last_login, created_at
+         FROM users WHERE id = $1`,
+        [req.user.id]
+      );
+      if (!result.rows.length) return errorResponse(res, 'User not found', 404);
+      const u = result.rows[0];
+      return successResponse(res, {
+        id: u.id, email: u.email,
+        firstName: u.first_name, lastName: u.last_name,
+        role: u.role, tenantId: null, tenantName: null
+      });
+    }
+
     const result = await query(
       `SELECT u.id, u.email, u.first_name, u.last_name, u.phone, u.role, u.specialization, u.bar_number,
               u.avatar_url, u.bio, u.is_verified, u.last_login, u.notification_preferences, u.created_at,
@@ -235,7 +276,8 @@ exports.changePassword = async (req, res) => {
     if (!isValid) return errorResponse(res, 'Current password is incorrect', 400);
 
     const newHash = await bcrypt.hash(newPassword, 12);
-    await query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, req.user.id]);
+    // Clear admin_set_password when user changes their own password
+    await query('UPDATE users SET password_hash = $1, admin_set_password = NULL WHERE id = $2', [newHash, req.user.id]);
     await logAudit({ tenantId: req.user.tenantId, userId: req.user.id, action: 'CHANGE_PASSWORD', resourceType: 'user', resourceId: req.user.id, req });
     return successResponse(res, null, 'Password changed successfully');
   } catch (error) {

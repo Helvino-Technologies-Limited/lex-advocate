@@ -12,11 +12,21 @@ async function authenticate(req, res, next) {
     const token = authHeader.split(' ')[1];
     const decoded = verifyAccessToken(token);
 
-    // Get user from DB
-    const result = await query(
-      'SELECT u.*, t.slug as tenant_slug, t.is_active as tenant_active, t.subscription_status FROM users u JOIN tenants t ON u.tenant_id = t.id WHERE u.id = $1 AND u.is_active = true',
-      [decoded.userId]
-    );
+    let result;
+    if (decoded.role === 'super_admin') {
+      // Superadmin has no tenant — no JOIN needed
+      result = await query(
+        `SELECT * FROM users WHERE id = $1 AND is_active = true AND role = 'super_admin' AND tenant_id IS NULL`,
+        [decoded.userId]
+      );
+    } else {
+      result = await query(
+        `SELECT u.*, t.slug as tenant_slug, t.is_active as tenant_active, t.subscription_status
+         FROM users u JOIN tenants t ON u.tenant_id = t.id
+         WHERE u.id = $1 AND u.is_active = true`,
+        [decoded.userId]
+      );
+    }
 
     if (!result.rows.length) {
       return errorResponse(res, 'User not found or deactivated', 401);
@@ -24,7 +34,7 @@ async function authenticate(req, res, next) {
 
     const user = result.rows[0];
 
-    if (!user.tenant_active) {
+    if (decoded.role !== 'super_admin' && !user.tenant_active) {
       return errorResponse(res, 'Tenant account is suspended', 403);
     }
 
@@ -32,8 +42,8 @@ async function authenticate(req, res, next) {
       id: user.id,
       email: user.email,
       role: user.role,
-      tenantId: user.tenant_id,
-      tenantSlug: user.tenant_slug,
+      tenantId: user.tenant_id || null,
+      tenantSlug: user.tenant_slug || null,
       firstName: user.first_name,
       lastName: user.last_name
     };
@@ -61,7 +71,6 @@ function authorize(...roles) {
 }
 
 function tenantScope(req, res, next) {
-  // Ensure all queries are scoped to the user's tenant
   req.tenantId = req.user?.tenantId;
   next();
 }

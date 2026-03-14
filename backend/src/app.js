@@ -23,6 +23,7 @@ const notificationRoutes = require('./routes/notification.routes');
 const reportRoutes = require('./routes/report.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const communicationRoutes = require('./routes/communication.routes');
+const superadminRoutes = require('./routes/superadmin.routes');
 
 const app = express();
 
@@ -95,6 +96,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/communications', communicationRoutes);
+app.use('/api/superadmin', superadminRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
