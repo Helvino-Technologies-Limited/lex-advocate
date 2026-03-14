@@ -266,6 +266,91 @@ exports.setUserPassword = async (req, res) => {
   }
 };
 
+// ── Subscription Payments ─────────────────────────────────────────────────────
+
+exports.listSubscriptionPayments = async (req, res) => {
+  const { status = 'pending', page = 1, limit = 20 } = req.query;
+  const offset = (page - 1) * limit;
+  try {
+    const params = [];
+    let where = 'WHERE 1=1';
+    if (status) { params.push(status); where += ` AND sp.status = $${params.length}`; }
+
+    const countResult = await query(`SELECT COUNT(*) FROM subscription_payments sp ${where}`, params);
+    params.push(parseInt(limit), parseInt(offset));
+    const result = await query(`
+      SELECT sp.*, t.name as tenant_name, t.email as tenant_email, t.subscription_status as tenant_sub_status
+      FROM subscription_payments sp
+      JOIN tenants t ON sp.tenant_id = t.id
+      ${where}
+      ORDER BY sp.submitted_at DESC
+      LIMIT $${params.length - 1} OFFSET $${params.length}
+    `, params);
+
+    return successResponse(res, {
+      payments: result.rows,
+      pagination: { total: parseInt(countResult.rows[0].count), page: parseInt(page), limit: parseInt(limit) }
+    });
+  } catch (error) {
+    logger.error('listSubscriptionPayments error:', error);
+    return errorResponse(res, 'Failed to list payments', 500);
+  }
+};
+
+exports.verifySubscriptionPayment = async (req, res) => {
+  const { id } = req.params;
+  const { notes } = req.body;
+  try {
+    const payResult = await query(`SELECT * FROM subscription_payments WHERE id = $1`, [id]);
+    if (!payResult.rows.length) return errorResponse(res, 'Payment not found', 404);
+    const payment = payResult.rows[0];
+    if (payment.status !== 'pending') return errorResponse(res, 'Payment already processed', 400);
+
+    // Verify the payment
+    await query(
+      `UPDATE subscription_payments SET status = 'verified', verified_at = NOW(), verified_by = $1, notes = $2 WHERE id = $3`,
+      [req.user.id, notes || null, id]
+    );
+
+    // Activate the tenant subscription
+    // Year 1: expires in 1 year from now; renewals also 1 year from now
+    const expiresAt = new Date();
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+
+    await query(`
+      UPDATE tenants
+      SET subscription_status = 'active',
+          is_active = true,
+          subscription_expires_at = $1,
+          subscription_year = $2
+      WHERE id = $3
+    `, [expiresAt.toISOString(), payment.payment_year, payment.tenant_id]);
+
+    await logAudit({ tenantId: null, userId: req.user.id, action: 'VERIFY_SUBSCRIPTION_PAYMENT', resourceType: 'subscription_payment', resourceId: id, req });
+    return successResponse(res, null, 'Payment verified and subscription activated');
+  } catch (error) {
+    logger.error('verifySubscriptionPayment error:', error);
+    return errorResponse(res, 'Failed to verify payment', 500);
+  }
+};
+
+exports.rejectSubscriptionPayment = async (req, res) => {
+  const { id } = req.params;
+  const { notes } = req.body;
+  try {
+    const result = await query(
+      `UPDATE subscription_payments SET status = 'rejected', verified_at = NOW(), verified_by = $1, notes = $2
+       WHERE id = $3 AND status = 'pending' RETURNING *`,
+      [req.user.id, notes || 'Payment rejected', id]
+    );
+    if (!result.rows.length) return errorResponse(res, 'Payment not found or already processed', 404);
+    await logAudit({ tenantId: null, userId: req.user.id, action: 'REJECT_SUBSCRIPTION_PAYMENT', resourceType: 'subscription_payment', resourceId: id, req });
+    return successResponse(res, null, 'Payment rejected');
+  } catch (error) {
+    return errorResponse(res, 'Failed to reject payment', 500);
+  }
+};
+
 exports.toggleUserActive = async (req, res) => {
   const { userId } = req.params;
   try {

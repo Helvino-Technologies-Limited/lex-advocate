@@ -21,7 +21,8 @@ async function authenticate(req, res, next) {
       );
     } else {
       result = await query(
-        `SELECT u.*, t.slug as tenant_slug, t.is_active as tenant_active, t.subscription_status
+        `SELECT u.*, t.slug as tenant_slug, t.is_active as tenant_active,
+                t.subscription_status, t.trial_ends_at, t.subscription_expires_at
          FROM users u JOIN tenants t ON u.tenant_id = t.id
          WHERE u.id = $1 AND u.is_active = true`,
         [decoded.userId]
@@ -34,8 +35,32 @@ async function authenticate(req, res, next) {
 
     const user = result.rows[0];
 
-    if (decoded.role !== 'super_admin' && !user.tenant_active) {
-      return errorResponse(res, 'Tenant account is suspended', 403);
+    if (decoded.role !== 'super_admin') {
+      const now = new Date();
+      const isExpiredTrial = user.subscription_status === 'trial' &&
+        user.trial_ends_at && new Date(user.trial_ends_at) < now;
+      const isExpiredSub = user.subscription_status === 'expired';
+      const url = req.originalUrl;
+      const isAllowedRoute = url.startsWith('/api/auth') || url.startsWith('/api/subscription');
+
+      if (isExpiredTrial || isExpiredSub) {
+        // Auto-mark as expired if trial just ran out
+        if (isExpiredTrial) {
+          query(
+            `UPDATE tenants SET subscription_status = 'expired', is_active = false
+             WHERE id = $1 AND subscription_status = 'trial'`,
+            [user.tenant_id]
+          ).catch(() => {});
+        }
+        if (!isAllowedRoute) {
+          return errorResponse(res, 'Subscription expired. Please renew to continue.', 402);
+        }
+      } else if (!user.tenant_active) {
+        // Suspended by admin (not expired subscription)
+        if (!isAllowedRoute) {
+          return errorResponse(res, 'Tenant account is suspended', 403);
+        }
+      }
     }
 
     req.user = {

@@ -24,6 +24,7 @@ import ProfilePage from './pages/settings/ProfilePage'
 import MessagesPage from './pages/communications/MessagesPage'
 import NotFoundPage from './pages/NotFoundPage'
 import SuperAdminPage from './pages/superadmin/SuperAdminPage'
+import SubscriptionPage from './pages/subscription/SubscriptionPage'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuthStore()
@@ -71,6 +72,7 @@ export default function App() {
         <Route path="messages" element={<MessagesPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="subscription" element={<SubscriptionPage />} />
       </Route>
 
       {/* Superadmin */}

@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 import {
   Scale, LayoutDashboard, Briefcase, Users, CheckSquare, FileText,
   DollarSign, BarChart3, Settings, LogOut, MessageSquare, Bell,
-  ChevronLeft, ChevronRight, UserCog, X
+  ChevronLeft, ChevronRight, UserCog, X, CreditCard
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -23,6 +23,7 @@ const navItems = [
 const adminItems = [
   { to: '/dashboard/users', icon: <UserCog size={18} />, label: 'Team Members' },
   { to: '/dashboard/settings', icon: <Settings size={18} />, label: 'Settings' },
+  { to: '/dashboard/subscription', icon: <CreditCard size={18} />, label: 'Subscription' },
 ]
 
 export default function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }) {

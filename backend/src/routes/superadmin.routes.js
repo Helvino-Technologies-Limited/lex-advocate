@@ -23,4 +23,9 @@ router.get('/tenants/:id/users',             sa.listTenantUsers);
 router.patch('/users/:userId/password',      sa.setUserPassword);
 router.patch('/users/:userId/toggle-active', sa.toggleUserActive);
 
+// Subscription payments
+router.get('/subscription-payments',                        sa.listSubscriptionPayments);
+router.patch('/subscription-payments/:id/verify',          sa.verifySubscriptionPayment);
+router.patch('/subscription-payments/:id/reject',          sa.rejectSubscriptionPayment);
+
 module.exports = router;

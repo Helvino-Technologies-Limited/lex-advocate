@@ -22,7 +22,7 @@ exports.register = async (req, res) => {
     const slug = slugify(tenantName);
     const tenantResult = await query(
       `INSERT INTO tenants (name, slug, email, phone, subscription_plan, subscription_status, trial_ends_at)
-       VALUES ($1, $2, $3, $4, 'free', 'trial', NOW() + INTERVAL '30 days') RETURNING id`,
+       VALUES ($1, $2, $3, $4, 'free', 'trial', NOW() + INTERVAL '5 days') RETURNING id`,
       [tenantName, slug, email, phone]
     );
     const tenantId = tenantResult.rows[0].id;

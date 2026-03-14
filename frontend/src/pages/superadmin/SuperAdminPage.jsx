@@ -463,12 +463,161 @@ function DeleteConfirm({ tenant, onClose, onDeleted }) {
   )
 }
 
+// ── Payments Tab ──────────────────────────────────────────────────────────────
+
+function PaymentsTab() {
+  const [payments, setPayments] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [statusFilter, setStatusFilter] = useState('pending')
+  const [actionLoading, setActionLoading] = useState(null)
+  const [rejectModal, setRejectModal] = useState(null)
+  const [rejectNote, setRejectNote] = useState('')
+
+  const fetchPayments = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await superAdminApi.listSubscriptionPayments({ status: statusFilter })
+      setPayments(res.data.data.payments)
+    } catch { toast.error('Failed to load payments') }
+    finally { setLoading(false) }
+  }, [statusFilter])
+
+  useEffect(() => { fetchPayments() }, [fetchPayments])
+
+  const handleVerify = async (id) => {
+    setActionLoading(id)
+    try {
+      await superAdminApi.verifyPayment(id, {})
+      toast.success('Payment verified & subscription activated!')
+      fetchPayments()
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to verify') }
+    finally { setActionLoading(null) }
+  }
+
+  const handleReject = async () => {
+    if (!rejectModal) return
+    setActionLoading(rejectModal)
+    try {
+      await superAdminApi.rejectPayment(rejectModal, { notes: rejectNote })
+      toast.success('Payment rejected')
+      setRejectModal(null)
+      setRejectNote('')
+      fetchPayments()
+    } catch { toast.error('Failed to reject') }
+    finally { setActionLoading(null) }
+  }
+
+  const fmt = (n) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 }).format(n)
+
+  const statusBadgeLocal = (s) => {
+    const map = { pending: 'bg-yellow-100 text-yellow-700', verified: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-600' }
+    return <span className={`text-xs px-2 py-0.5 rounded-full font-semibold capitalize ${map[s] || 'bg-gray-100 text-gray-500'}`}>{s}</span>
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-card">
+      <div className="flex items-center justify-between p-6 border-b border-gray-100">
+        <h2 className="text-lg font-bold text-navy-950" style={{ fontFamily: 'Playfair Display' }}>Subscription Payments</h2>
+        <div className="flex gap-2">
+          {['pending','verified','rejected'].map(s => (
+            <button key={s} onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition-colors ${statusFilter === s ? 'bg-navy-950 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-16 text-gray-400">Loading payments...</div>
+      ) : payments.length === 0 ? (
+        <div className="text-center py-16 text-gray-400">No {statusFilter} payments</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Firm</th>
+                <th>MPesa Code</th>
+                <th>Amount</th>
+                <th>Year</th>
+                <th>Submitted</th>
+                <th>Status</th>
+                {statusFilter === 'pending' && <th>Actions</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {payments.map(p => (
+                <tr key={p.id}>
+                  <td>
+                    <div className="font-semibold text-sm text-gray-900">{p.tenant_name}</div>
+                    <div className="text-xs text-gray-400">{p.tenant_email}</div>
+                    <div className="text-xs text-gray-400 capitalize">{p.tenant_sub_status}</div>
+                  </td>
+                  <td><code className="text-sm font-mono bg-gray-100 px-2 py-0.5 rounded">{p.mpesa_code}</code></td>
+                  <td className="font-semibold text-sm">{fmt(p.amount)}</td>
+                  <td className="text-sm text-gray-600">Year {p.payment_year}</td>
+                  <td className="text-xs text-gray-500">
+                    {new Date(p.submitted_at).toLocaleString('en-KE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </td>
+                  <td>{statusBadgeLocal(p.status)}</td>
+                  {statusFilter === 'pending' && (
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleVerify(p.id)}
+                          disabled={actionLoading === p.id}
+                          className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 disabled:opacity-50 font-semibold">
+                          {actionLoading === p.id ? '...' : 'Verify'}
+                        </button>
+                        <button
+                          onClick={() => { setRejectModal(p.id); setRejectNote('') }}
+                          className="text-xs bg-red-100 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-200 font-semibold">
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      {rejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setRejectModal(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
+            <h3 className="font-bold text-gray-900 mb-3">Reject Payment</h3>
+            <textarea
+              value={rejectNote}
+              onChange={e => setRejectNote(e.target.value)}
+              placeholder="Reason for rejection (shown to tenant)..."
+              rows={3}
+              className="input-field resize-none mb-4"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setRejectModal(null)} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button onClick={handleReject} disabled={actionLoading} className="flex-1 py-2 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-50">
+                {actionLoading ? 'Rejecting...' : 'Confirm Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function SuperAdminPage() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
 
+  const [activeTab, setActiveTab] = useState('tenants')
   const [stats, setStats] = useState(null)
   const [tenants, setTenants] = useState([])
   const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 })
@@ -604,8 +753,23 @@ export default function SuperAdminPage() {
           />
         </div>
 
+        {/* Tab Bar */}
+        <div className="flex gap-1 mb-6 bg-white rounded-xl p-1 shadow-sm border border-gray-100 w-fit">
+          {[
+            { key: 'tenants', label: 'Tenants' },
+            { key: 'payments', label: 'Subscription Payments' },
+          ].map(tab => (
+            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+              className={`px-5 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === tab.key ? 'bg-navy-950 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'payments' && <PaymentsTab />}
+
         {/* Tenants table */}
-        <div className="bg-white rounded-2xl shadow-card">
+        {activeTab === 'tenants' && <div className="bg-white rounded-2xl shadow-card">
           {/* Toolbar */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 border-b border-gray-100">
             <h2 className="text-lg font-bold text-navy-950" style={{ fontFamily: 'Playfair Display' }}>
@@ -749,7 +913,7 @@ export default function SuperAdminPage() {
               </div>
             </div>
           )}
-        </div>
+        </div>}
       </main>
 
       {/* Modals */}

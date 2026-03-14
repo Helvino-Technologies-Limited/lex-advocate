@@ -24,6 +24,7 @@ const reportRoutes = require('./routes/report.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const communicationRoutes = require('./routes/communication.routes');
 const superadminRoutes = require('./routes/superadmin.routes');
+const subscriptionRoutes = require('./routes/subscription.routes');
 
 const app = express();
 
@@ -97,6 +98,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/communications', communicationRoutes);
 app.use('/api/superadmin', superadminRoutes);
+app.use('/api/subscription', subscriptionRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

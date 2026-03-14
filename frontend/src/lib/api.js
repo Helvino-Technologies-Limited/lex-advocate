@@ -25,6 +25,14 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
+    if (error.response?.status === 402) {
+      // Subscription expired — redirect to subscription page
+      if (window.location.pathname !== '/dashboard/subscription') {
+        window.location.href = '/dashboard/subscription'
+      }
+      return Promise.reject(error)
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
       const { refreshToken, updateToken, logout } = useAuthStore.getState()
@@ -155,6 +163,12 @@ export const messagesApi = {
   send: (data) => api.post('/communications/messages', data)
 }
 
+// Subscription
+export const subscriptionApi = {
+  getStatus: () => api.get('/subscription/status'),
+  pay: (data) => api.post('/subscription/pay', data)
+}
+
 // Superadmin
 export const superAdminApi = {
   getStats: () => api.get('/superadmin/stats'),
@@ -170,4 +184,8 @@ export const superAdminApi = {
   listTenantUsers: (tenantId) => api.get(`/superadmin/tenants/${tenantId}/users`),
   setUserPassword: (userId, password) => api.patch(`/superadmin/users/${userId}/password`, { password }),
   toggleUserActive: (userId) => api.patch(`/superadmin/users/${userId}/toggle-active`),
+  // Subscription payments
+  listSubscriptionPayments: (params) => api.get('/superadmin/subscription-payments', { params }),
+  verifyPayment: (id, data) => api.patch(`/superadmin/subscription-payments/${id}/verify`, data),
+  rejectPayment: (id, data) => api.patch(`/superadmin/subscription-payments/${id}/reject`, data),
 }

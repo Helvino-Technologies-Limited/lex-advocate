@@ -1,17 +1,50 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, CheckSquare, Check } from 'lucide-react'
+import { Plus, Search, CheckSquare } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { tasksApi, casesApi, usersApi } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
-import { formatDate, getStatusColor, getPriorityIcon } from '../../lib/utils'
+import { formatDate, getPriorityIcon } from '../../lib/utils'
 import Badge from '../../components/ui/Badge'
 import Spinner from '../../components/ui/Spinner'
 import EmptyState from '../../components/ui/EmptyState'
 import Modal from '../../components/ui/Modal'
 
 const CATEGORIES = ['general','court_appearance','document_drafting','client_follow_up','research','filing','billing','meeting','other']
+
+const STATUS_OPTIONS = [
+  { value: 'not_started', label: 'Not Started', color: 'bg-gray-100 text-gray-700' },
+  { value: 'started',     label: 'Started',     color: 'bg-cyan-100 text-cyan-700' },
+  { value: 'in_progress', label: 'In Progress',  color: 'bg-blue-100 text-blue-700' },
+  { value: 'paused',      label: 'Paused',       color: 'bg-yellow-100 text-yellow-700' },
+  { value: 'completed',   label: 'Completed',    color: 'bg-green-100 text-green-700' },
+  { value: 'deferred',    label: 'Deferred',     color: 'bg-orange-100 text-orange-700' },
+]
+
+const STATUS_COLS = [
+  { key: 'not_started', label: 'Not Started', color: 'bg-gray-50 border-gray-200' },
+  { key: 'started',     label: 'Started',     color: 'bg-cyan-50 border-cyan-200' },
+  { key: 'in_progress', label: 'In Progress',  color: 'bg-blue-50 border-blue-200' },
+  { key: 'paused',      label: 'Paused',       color: 'bg-yellow-50 border-yellow-200' },
+  { key: 'completed',   label: 'Completed',    color: 'bg-green-50 border-green-200' },
+]
+
+function StatusDropdown({ taskId, current, onUpdate }) {
+  const opt = STATUS_OPTIONS.find(s => s.value === current) || STATUS_OPTIONS[0]
+  return (
+    <select
+      value={current}
+      onChange={e => onUpdate(taskId, e.target.value)}
+      onClick={e => e.stopPropagation()}
+      className={`text-xs font-semibold px-2 py-0.5 rounded-full border-0 cursor-pointer outline-none ${opt.color}`}
+    >
+      {STATUS_OPTIONS.map(s => (
+        <option key={s.value} value={s.value}>{s.label}</option>
+      ))}
+    </select>
+  )
+}
 
 export default function TasksPage() {
   const qc = useQueryClient()
@@ -24,7 +57,7 @@ export default function TasksPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['tasks', search, status, priority, page],
-    queryFn: () => tasksApi.getAll({ search, status, priority, page, limit: 25 }).then(r => r.data),
+    queryFn: () => tasksApi.getAll({ search, status, priority, page, limit: 50 }).then(r => r.data),
     keepPreviousData: true
   })
 
@@ -50,14 +83,11 @@ export default function TasksPage() {
     onError: () => toast.error('Failed to update task')
   })
 
-  const inp = "w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-[#c9a96e] focus:ring-2 focus:ring-[#c9a96e]/20"
+  const handleStatusChange = (id, newStatus) => {
+    updateMutation.mutate({ id, data: { status: newStatus } })
+  }
 
-  const statusCols = [
-    { key: 'not_started', label: 'Not Started', color: 'bg-gray-50 border-gray-200' },
-    { key: 'in_progress', label: 'In Progress', color: 'bg-blue-50 border-blue-200' },
-    { key: 'completed', label: 'Completed', color: 'bg-green-50 border-green-200' },
-    { key: 'deferred', label: 'Deferred', color: 'bg-orange-50 border-orange-200' },
-  ]
+  const inp = "w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-[#c9a96e] focus:ring-2 focus:ring-[#c9a96e]/20"
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -76,12 +106,9 @@ export default function TasksPage() {
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks..." className="input-field pl-9 text-sm" />
         </div>
-        <select value={status} onChange={e => setStatus(e.target.value)} className="input-field w-full md:w-40 text-sm">
+        <select value={status} onChange={e => setStatus(e.target.value)} className="input-field w-full md:w-44 text-sm">
           <option value="">All Statuses</option>
-          <option value="not_started">Not Started</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-          <option value="deferred">Deferred</option>
+          {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
         <select value={priority} onChange={e => setPriority(e.target.value)} className="input-field w-full md:w-36 text-sm">
           <option value="">All Priorities</option>
@@ -97,42 +124,40 @@ export default function TasksPage() {
       ) : tasks.length === 0 ? (
         <EmptyState icon={<CheckSquare size={40} />} title="No tasks found" description="Create your first task to start tracking work." action={<button onClick={() => setAddModal(true)} className="btn-gold text-sm">New Task</button>} />
       ) : (
-        <div className="hidden md:grid md:grid-cols-4 gap-4">
-          {statusCols.map(col => {
-            const colTasks = tasks.filter(t => t.status === col.key)
-            return (
-              <div key={col.key} className={`rounded-xl border p-4 ${col.color}`}>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold text-gray-700">{col.label}</h3>
-                  <span className="text-xs font-bold bg-white/60 px-2 py-0.5 rounded-full text-gray-600">{colTasks.length}</span>
-                </div>
-                <div className="space-y-2">
-                  {colTasks.map(t => (
-                    <div key={t.id} className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-medium text-gray-800 leading-snug">{t.title}</p>
-                        <span className="text-base flex-shrink-0">{getPriorityIcon(t.priority)}</span>
+        /* Kanban board — desktop */
+        <div className="hidden md:block overflow-x-auto pb-2">
+          <div className="flex gap-4 min-w-max">
+            {STATUS_COLS.map(col => {
+              const colTasks = tasks.filter(t => t.status === col.key)
+              return (
+                <div key={col.key} className={`rounded-xl border p-4 w-56 ${col.color}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-bold text-gray-700">{col.label}</h3>
+                    <span className="text-xs font-bold bg-white/60 px-2 py-0.5 rounded-full text-gray-600">{colTasks.length}</span>
+                  </div>
+                  <div className="space-y-2">
+                    {colTasks.map(t => (
+                      <div key={t.id} className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between gap-2 mb-1.5">
+                          <p className="text-sm font-medium text-gray-800 leading-snug">{t.title}</p>
+                          <span className="text-base flex-shrink-0">{getPriorityIcon(t.priority)}</span>
+                        </div>
+                        {t.case_title && <p className="text-xs text-gray-400 truncate">📁 {t.case_title}</p>}
+                        {t.due_date && <p className={`text-xs mt-1 font-medium ${new Date(t.due_date) < new Date() && t.status !== 'completed' ? 'text-red-500' : 'text-gray-400'}`}>Due: {formatDate(t.due_date)}</p>}
+                        <div className="mt-2">
+                          <StatusDropdown taskId={t.id} current={t.status} onUpdate={handleStatusChange} />
+                        </div>
                       </div>
-                      {t.case_title && <p className="text-xs text-gray-400 mt-1 truncate">📁 {t.case_title}</p>}
-                      {t.due_date && <p className={`text-xs mt-1 font-medium ${new Date(t.due_date) < new Date() && t.status !== 'completed' ? 'text-red-500' : 'text-gray-400'}`}>Due: {formatDate(t.due_date)}</p>}
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-xs text-gray-400">{t.assignee_first ? `${t.assignee_first} ${t.assignee_last}` : 'Unassigned'}</span>
-                        {t.status !== 'completed' && (
-                          <button onClick={() => updateMutation.mutate({ id: t.id, data: { status: 'completed' } })}
-                            className="p-1 hover:bg-green-100 rounded text-green-500 transition-colors">
-                            <Check size={13} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       )}
 
+      {/* Mobile list */}
       {tasks.length > 0 && (
         <div className="md:hidden card overflow-hidden">
           <table className="w-full">
@@ -150,7 +175,9 @@ export default function TasksPage() {
                     <p className="text-sm font-medium text-gray-800">{t.title}</p>
                     <p className="text-xs text-gray-400">{getPriorityIcon(t.priority)} {t.priority}</p>
                   </td>
-                  <td className="px-4 py-3"><Badge status={t.status}>{t.status?.replace('_',' ')}</Badge></td>
+                  <td className="px-3 py-3">
+                    <StatusDropdown taskId={t.id} current={t.status} onUpdate={handleStatusChange} />
+                  </td>
                   <td className="px-4 py-3">
                     <p className={`text-xs font-medium ${t.due_date && new Date(t.due_date) < new Date() && t.status !== 'completed' ? 'text-red-500' : 'text-gray-500'}`}>
                       {t.due_date ? formatDate(t.due_date) : '—'}
