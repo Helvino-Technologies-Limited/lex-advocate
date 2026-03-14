@@ -150,9 +150,10 @@ export default function DocumentsPage() {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-2">
-                        <button className="p-1.5 hover:bg-blue-50 rounded text-blue-500 transition-colors">
+                        <a href={d.file_path} target="_blank" rel="noopener noreferrer" download={d.file_name}
+                          className="p-1.5 hover:bg-blue-50 rounded text-blue-500 transition-colors inline-flex items-center">
                           <Download size={14} />
-                        </button>
+                        </a>
                         <button onClick={() => { if (confirm('Delete this document?')) deleteMutation.mutate(d.id) }}
                           className="p-1.5 hover:bg-red-50 rounded text-red-400 transition-colors">
                           <Trash2 size={14} />
