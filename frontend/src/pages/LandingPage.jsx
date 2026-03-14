@@ -394,7 +394,7 @@ export default function LandingPage() {
             <span className="text-white font-bold" style={{ fontFamily: 'Playfair Display' }}>LEX ADVOCATE</span>
           </div>
           <p className="text-gray-500 text-sm text-center">
-            © 2024 Helvino Technologies Limited. All rights reserved.
+            © {new Date().getFullYear()} Helvino Technologies Limited. All rights reserved.
           </p>
           <div className="flex gap-4 text-gray-500 text-xs">
             <a href="#" className="hover:text-[#c9a96e] transition-colors">Privacy</a>
