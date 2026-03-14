@@ -3,6 +3,7 @@ services:
     name: lex-advocate-api
     env: node
     plan: free
+    rootDir: backend
     buildCommand: npm install && node src/database/migrate.js && node src/database/seed.js
     startCommand: npm start
     healthCheckPath: /health
