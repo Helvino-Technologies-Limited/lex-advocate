@@ -1,7 +1,61 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  /* Gold palette */
+  --color-gold-50: #fdf8ec;
+  --color-gold-100: #faefc9;
+  --color-gold-200: #f5da8f;
+  --color-gold-300: #efc154;
+  --color-gold-400: #e9a82a;
+  --color-gold-500: #c9861a;
+  --color-gold-600: #a86514;
+  --color-gold-700: #8b4f13;
+  --color-gold-800: #723f14;
+  --color-gold-900: #5e3413;
+  --color-gold-1000: #c9a96e;
+
+  /* Navy palette */
+  --color-navy-50: #f0f4ff;
+  --color-navy-100: #dce6ff;
+  --color-navy-200: #b5ceff;
+  --color-navy-300: #7ea9ff;
+  --color-navy-400: #4080ff;
+  --color-navy-500: #1a5eff;
+  --color-navy-600: #0040f5;
+  --color-navy-700: #0033cc;
+  --color-navy-800: #002999;
+  --color-navy-900: #001a5e;
+  --color-navy-950: #0a0f2e;
+
+  /* Cream */
+  --color-cream: #f8f4ed;
+  --color-cream-dark: #ede8df;
+
+  /* Fonts */
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Shadows */
+  --shadow-gold: 0 4px 24px rgba(201, 169, 110, 0.3);
+  --shadow-gold-lg: 0 8px 40px rgba(201, 169, 110, 0.4);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-card-hover: 0 8px 32px rgba(0,0,0,0.12);
+
+  /* Animations */
+  --animate-fade-in: fadeIn 0.5s ease-in-out;
+  --animate-slide-up: slideUp 0.4s ease-out;
+  --animate-slide-in-right: slideInRight 0.3s ease-out;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-shimmer: shimmer 2s infinite;
+}
+
+@keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes slideUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+@keyframes slideInRight { 0% { transform: translateX(100%); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 
 :root {
   --gold: #c9a96e;
@@ -141,5 +195,3 @@ tbody tr:hover { background: #fdf8f0; }
 tbody td { padding: 14px 16px; font-size: 14px; color: #374151; }
 
 .skeleton { background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%); background-size: 200% 100%; animation: shimmer 2s infinite; border-radius: 6px; }
-
-@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
