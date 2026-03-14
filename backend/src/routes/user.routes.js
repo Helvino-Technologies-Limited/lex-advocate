@@ -8,8 +8,8 @@ const { getPagination, buildPaginationMeta } = require('../utils/helpers');
 const { sendEmail, welcomeEmailTemplate } = require('../utils/email');
 const logger = require('../utils/logger');
 
-// Get all users in tenant
-router.get('/', authenticate, authorize('admin'), async (req, res) => {
+// Get all users in tenant (any authenticated user can list colleagues)
+router.get('/', authenticate, async (req, res) => {
   const { page, limit, offset } = getPagination(req.query.page, req.query.limit);
   const { role, search, is_active } = req.query;
   try {

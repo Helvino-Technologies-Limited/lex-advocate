@@ -21,7 +21,7 @@ const navItems = [
 ]
 
 const adminItems = [
-  { to: '/dashboard/users', icon: <UserCog size={18} />, label: 'Users' },
+  { to: '/dashboard/users', icon: <UserCog size={18} />, label: 'Team Members' },
   { to: '/dashboard/settings', icon: <Settings size={18} />, label: 'Settings' },
 ]
 

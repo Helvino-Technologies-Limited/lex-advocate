@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
-import { ArrowLeft, Save } from 'lucide-react'
+import { ArrowLeft, Save, UserPlus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { casesApi, clientsApi, usersApi } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
@@ -17,7 +17,7 @@ export default function NewCasePage() {
   const { register, handleSubmit, watch, formState: { errors } } = useForm({ defaultValues: { status: 'new', priority: 'medium', billingType: 'hourly', isProBono: false } })
 
   const { data: clientsData } = useQuery({ queryKey: ['clients-list'], queryFn: () => clientsApi.getAll({ limit: 100 }).then(r => r.data.data) })
-  const { data: usersData } = useQuery({ queryKey: ['users-list'], queryFn: () => usersApi.getAll({ limit: 100, role: 'advocate' }).then(r => r.data.data), enabled: user?.role === 'admin' })
+  const { data: usersData } = useQuery({ queryKey: ['users-list'], queryFn: () => usersApi.getAll({ limit: 100, role: 'advocate' }).then(r => r.data.data) })
 
   const clients = clientsData || []
   const advocates = usersData || []
@@ -96,15 +96,24 @@ export default function NewCasePage() {
                 {['low','medium','high','urgent'].map(p => <option key={p} value={p} className="capitalize">{p}</option>)}
               </select>
             </div>
-            {user?.role === 'admin' && (
-              <div>
+            <div>
+              <div className="flex items-center justify-between">
                 <label className={labelClass}>Lead Advocate</label>
-                <select {...register('leadAdvocateId')} className={inputClass}>
-                  <option value="">Select advocate</option>
-                  {advocates.map(a => <option key={a.id} value={a.id}>{a.first_name} {a.last_name}</option>)}
-                </select>
+                {advocates.length === 0 && user?.role === 'admin' && (
+                  <a href="/dashboard/users" className="flex items-center gap-1 text-xs text-[#c9a96e] hover:underline font-medium">
+                    <UserPlus size={12} /> Add advocate
+                  </a>
+                )}
               </div>
-            )}
+              <select {...register('leadAdvocateId')} className={inputClass}>
+                <option value="">
+                  {advocates.length === 0 ? 'No advocates — add one in Team Members' : 'Select advocate'}
+                </option>
+                {advocates.map(a => (
+                  <option key={a.id} value={a.id}>{a.first_name} {a.last_name}{a.specialization ? ` — ${a.specialization}` : ''}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <div>
             <label className={labelClass}>Description</label>
