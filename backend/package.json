@@ -1,0 +1,15 @@
+{
+  "name": "lex-advocate-backend",
+  "version": "1.0.0",
+  "description": "Helvino Technologies - Advocate Management System Backend",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "migrate": "node src/database/migrate.js",
+    "seed": "node src/database/seed.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

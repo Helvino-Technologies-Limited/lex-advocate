@@ -1,0 +1,10 @@
+node_modules/
+.env
+uploads/*.pdf
+uploads/*.docx
+uploads/*.jpg
+uploads/*.png
+uploads/*.jpeg
+uploads/*.xlsx
+uploads/*.doc
+*.log
