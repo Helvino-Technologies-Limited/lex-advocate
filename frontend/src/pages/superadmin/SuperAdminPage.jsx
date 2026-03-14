@@ -463,6 +463,22 @@ function DeleteConfirm({ tenant, onClose, onDeleted }) {
   )
 }
 
+// ── Tenant Action Buttons (desktop table) ─────────────────────────────────────
+
+function TenantActions({ tenant, onUsers, onEdit, onActivate, onDeactivate, onDelete }) {
+  return (
+    <div className="flex items-center gap-2">
+      <button onClick={onUsers} title="View users" className="text-blue-600 hover:text-blue-800"><Users size={14} /></button>
+      <button onClick={onEdit}  title="Edit"       className="text-gray-500 hover:text-gray-700"><Edit size={14} /></button>
+      {tenant.subscription_status === 'suspended'
+        ? <button onClick={onActivate}   title="Activate" className="text-emerald-600 hover:text-emerald-800"><CheckCircle size={14} /></button>
+        : <button onClick={onDeactivate} title="Suspend"  className="text-amber-600 hover:text-amber-800"><XCircle size={14} /></button>
+      }
+      <button onClick={onDelete} title="Delete" className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
+    </div>
+  )
+}
+
 // ── Payments Tab ──────────────────────────────────────────────────────────────
 
 function PaymentsTab() {
@@ -515,13 +531,16 @@ function PaymentsTab() {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-card">
-      <div className="flex items-center justify-between p-6 border-b border-gray-100">
-        <h2 className="text-lg font-bold text-navy-950" style={{ fontFamily: 'Playfair Display' }}>Subscription Payments</h2>
-        <div className="flex gap-2">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
+      {/* Header */}
+      <div className="p-4 md:p-6 border-b border-gray-100 space-y-3">
+        <h2 className="text-base md:text-lg font-bold text-[#0a0f2e]" style={{ fontFamily: 'Playfair Display' }}>
+          Subscription Payments
+        </h2>
+        <div className="flex gap-1.5">
           {['pending','verified','rejected'].map(s => (
             <button key={s} onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition-colors ${statusFilter === s ? 'bg-navy-950 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg capitalize transition-colors ${statusFilter === s ? 'bg-[#0a0f2e] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
               {s}
             </button>
           ))}
@@ -529,60 +548,88 @@ function PaymentsTab() {
       </div>
 
       {loading ? (
-        <div className="text-center py-16 text-gray-400">Loading payments...</div>
+        <div className="text-center py-16 text-gray-400 text-sm">Loading payments...</div>
       ) : payments.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">No {statusFilter} payments</div>
+        <div className="text-center py-16 text-gray-400 text-sm">No {statusFilter} payments</div>
       ) : (
-        <div className="overflow-x-auto">
-          <table>
-            <thead>
-              <tr>
-                <th>Firm</th>
-                <th>MPesa Code</th>
-                <th>Amount</th>
-                <th>Year</th>
-                <th>Submitted</th>
-                <th>Status</th>
-                {statusFilter === 'pending' && <th>Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {payments.map(p => (
-                <tr key={p.id}>
-                  <td>
-                    <div className="font-semibold text-sm text-gray-900">{p.tenant_name}</div>
-                    <div className="text-xs text-gray-400">{p.tenant_email}</div>
-                    <div className="text-xs text-gray-400 capitalize">{p.tenant_sub_status}</div>
-                  </td>
-                  <td><code className="text-sm font-mono bg-gray-100 px-2 py-0.5 rounded">{p.mpesa_code}</code></td>
-                  <td className="font-semibold text-sm">{fmt(p.amount)}</td>
-                  <td className="text-sm text-gray-600">Year {p.payment_year}</td>
-                  <td className="text-xs text-gray-500">
-                    {new Date(p.submitted_at).toLocaleString('en-KE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                  </td>
-                  <td>{statusBadgeLocal(p.status)}</td>
-                  {statusFilter === 'pending' && (
-                    <td>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleVerify(p.id)}
-                          disabled={actionLoading === p.id}
-                          className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 disabled:opacity-50 font-semibold">
-                          {actionLoading === p.id ? '...' : 'Verify'}
-                        </button>
-                        <button
-                          onClick={() => { setRejectModal(p.id); setRejectNote('') }}
-                          className="text-xs bg-red-100 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-200 font-semibold">
-                          Reject
-                        </button>
-                      </div>
-                    </td>
-                  )}
+        <>
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Firm</th><th>MPesa Code</th><th>Amount</th>
+                  <th>Year</th><th>Submitted</th><th>Status</th>
+                  {statusFilter === 'pending' && <th>Actions</th>}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {payments.map(p => (
+                  <tr key={p.id}>
+                    <td>
+                      <div className="font-semibold text-sm text-gray-900">{p.tenant_name}</div>
+                      <div className="text-xs text-gray-400">{p.tenant_email}</div>
+                    </td>
+                    <td><code className="text-sm font-mono bg-gray-100 px-2 py-0.5 rounded">{p.mpesa_code}</code></td>
+                    <td className="font-semibold text-sm">{fmt(p.amount)}</td>
+                    <td className="text-sm text-gray-600">Year {p.payment_year}</td>
+                    <td className="text-xs text-gray-500">
+                      {new Date(p.submitted_at).toLocaleString('en-KE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                    <td>{statusBadgeLocal(p.status)}</td>
+                    {statusFilter === 'pending' && (
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => handleVerify(p.id)} disabled={actionLoading === p.id}
+                            className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 disabled:opacity-50 font-semibold">
+                            {actionLoading === p.id ? '...' : 'Verify'}
+                          </button>
+                          <button onClick={() => { setRejectModal(p.id); setRejectNote('') }}
+                            className="text-xs bg-red-100 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-200 font-semibold">
+                            Reject
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y divide-gray-50">
+            {payments.map(p => (
+              <div key={p.id} className="p-4 space-y-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm text-gray-900 truncate">{p.tenant_name}</div>
+                    <div className="text-xs text-gray-400 truncate">{p.tenant_email}</div>
+                  </div>
+                  {statusBadgeLocal(p.status)}
+                </div>
+                <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+                  <code className="bg-gray-100 px-2 py-0.5 rounded font-mono text-gray-800">{p.mpesa_code}</code>
+                  <span className="font-semibold text-gray-800">{fmt(p.amount)}</span>
+                  <span>Year {p.payment_year}</span>
+                  <span>{new Date(p.submitted_at).toLocaleDateString('en-KE', { day: '2-digit', month: 'short' })}</span>
+                </div>
+                {statusFilter === 'pending' && (
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => handleVerify(p.id)} disabled={actionLoading === p.id}
+                      className="flex-1 py-2 text-xs font-semibold rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50">
+                      {actionLoading === p.id ? 'Verifying...' : 'Verify & Activate'}
+                    </button>
+                    <button onClick={() => { setRejectModal(p.id); setRejectNote('') }}
+                      className="flex-1 py-2 text-xs font-semibold rounded-lg bg-red-100 text-red-600 hover:bg-red-200">
+                      Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Reject Modal */}
@@ -676,273 +723,249 @@ export default function SuperAdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-navy-950 text-white px-6 py-4 flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-[#c9a96e] rounded-lg flex items-center justify-center">
-            <Scale size={18} className="text-navy-950" />
-          </div>
-          <div>
-            <span className="font-bold text-lg" style={{ fontFamily: 'Playfair Display' }}>LEX ADVOCATE</span>
-            <span className="ml-2 text-xs bg-[#c9a96e]/20 text-[#c9a96e] border border-[#c9a96e]/30 px-2 py-0.5 rounded-full font-semibold">
-              SUPERADMIN
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-[#c9a96e]/20 flex items-center justify-center">
-              <ShieldCheck size={16} className="text-[#c9a96e]" />
+
+      {/* ── Header ── */}
+      <header className="bg-[#0a0f2e] text-white px-4 md:px-6 py-3 md:py-4 shadow-lg sticky top-0 z-20">
+        <div className="flex items-center justify-between gap-3">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 flex-shrink-0 bg-[#c9a96e] rounded-lg flex items-center justify-center">
+              <Scale size={16} className="text-[#0a0f2e]" />
             </div>
-            <span className="text-sm text-gray-300">{user?.email}</span>
+            <div className="min-w-0">
+              <div className="font-bold text-base leading-tight truncate" style={{ fontFamily: 'Playfair Display' }}>
+                LEX ADVOCATE
+              </div>
+              <div className="text-[10px] text-[#c9a96e] font-semibold tracking-widest uppercase">
+                Superadmin
+              </div>
+            </div>
           </div>
-          <button onClick={handleLogout}
-            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/10">
-            <LogOut size={15} />
-            Sign Out
-          </button>
+
+          {/* Right side */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="hidden sm:flex items-center gap-1.5">
+              <ShieldCheck size={14} className="text-[#c9a96e]" />
+              <span className="text-xs text-gray-300 truncate max-w-[160px]">{user?.email}</span>
+            </div>
+            <button onClick={handleLogout}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors px-2.5 py-1.5 rounded-lg hover:bg-white/10 border border-white/10">
+              <LogOut size={13} />
+              <span className="hidden sm:inline">Sign Out</span>
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-3 md:px-6 py-5 md:py-8">
+
         {/* Page title */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-navy-950" style={{ fontFamily: 'Playfair Display' }}>
+        <div className="mb-5 md:mb-8">
+          <h1 className="text-xl md:text-3xl font-bold text-[#0a0f2e]" style={{ fontFamily: 'Playfair Display' }}>
             Platform Dashboard
           </h1>
-          <p className="text-gray-500 text-sm mt-1">Manage all law firm tenants on the Lex Advocate platform</p>
+          <p className="text-gray-500 text-xs md:text-sm mt-0.5">Manage all law firm tenants</p>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
-          <StatCard
-            label="Total Tenants"
-            value={stats?.tenants?.total}
-            icon={<Building2 size={20} className="text-white" />}
-            color="bg-navy-950"
-          />
-          <StatCard
-            label="Active Firms"
-            value={stats?.tenants?.paid}
-            icon={<CheckCircle size={20} className="text-white" />}
-            color="bg-emerald-500"
-          />
-          <StatCard
-            label="On Trial"
-            value={stats?.tenants?.trial}
-            icon={<RefreshCw size={20} className="text-white" />}
-            color="bg-blue-500"
-          />
-          <StatCard
-            label="Suspended"
-            value={stats?.tenants?.suspended}
-            icon={<XCircle size={20} className="text-white" />}
-            color="bg-red-500"
-          />
-          <StatCard
-            label="Total Users"
-            value={stats?.totalUsers}
-            icon={<Users size={20} className="text-white" />}
-            color="bg-[#c9a96e]"
-          />
-          <StatCard
-            label="Total Cases"
-            value={stats?.totalCases}
-            icon={<Briefcase size={20} className="text-white" />}
-            color="bg-purple-500"
-          />
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-4 mb-5 md:mb-8">
+          {[
+            { label: 'Tenants',  value: stats?.tenants?.total,     icon: <Building2 size={16} className="text-white" />, color: 'bg-[#0a0f2e]' },
+            { label: 'Active',   value: stats?.tenants?.paid,      icon: <CheckCircle size={16} className="text-white" />, color: 'bg-emerald-500' },
+            { label: 'Trial',    value: stats?.tenants?.trial,     icon: <RefreshCw size={16} className="text-white" />, color: 'bg-blue-500' },
+            { label: 'Suspended',value: stats?.tenants?.suspended, icon: <XCircle size={16} className="text-white" />, color: 'bg-red-500' },
+            { label: 'Users',    value: stats?.totalUsers,         icon: <Users size={16} className="text-white" />, color: 'bg-[#c9a96e]' },
+            { label: 'Cases',    value: stats?.totalCases,         icon: <Briefcase size={16} className="text-white" />, color: 'bg-purple-500' },
+          ].map(s => (
+            <div key={s.label} className="bg-white rounded-xl p-3 md:p-5 shadow-sm flex items-center gap-2 md:gap-3">
+              <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg flex-shrink-0 flex items-center justify-center ${s.color}`}>
+                {s.icon}
+              </div>
+              <div className="min-w-0">
+                <div className="text-lg md:text-2xl font-bold text-[#0a0f2e] leading-tight">{s.value ?? '—'}</div>
+                <div className="text-[10px] md:text-xs text-gray-500 truncate">{s.label}</div>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Tab Bar */}
-        <div className="flex gap-1 mb-6 bg-white rounded-xl p-1 shadow-sm border border-gray-100 w-fit">
+        <div className="flex gap-1 mb-4 md:mb-6 bg-white rounded-xl p-1 shadow-sm border border-gray-100">
           {[
-            { key: 'tenants', label: 'Tenants' },
-            { key: 'payments', label: 'Subscription Payments' },
+            { key: 'tenants',  label: 'Tenants' },
+            { key: 'payments', label: 'Payments' },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`px-5 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === tab.key ? 'bg-navy-950 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === tab.key ? 'bg-[#0a0f2e] text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
               {tab.label}
             </button>
           ))}
         </div>
 
+        {/* ── Payments Tab ── */}
         {activeTab === 'payments' && <PaymentsTab />}
 
-        {/* Tenants table */}
-        {activeTab === 'tenants' && <div className="bg-white rounded-2xl shadow-card">
-          {/* Toolbar */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 border-b border-gray-100">
-            <h2 className="text-lg font-bold text-navy-950" style={{ fontFamily: 'Playfair Display' }}>
-              Law Firm Tenants
-              <span className="ml-2 text-sm font-normal text-gray-400">({pagination.total})</span>
-            </h2>
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-64">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Search firms..."
-                  className="input-field pl-9 py-2 text-sm"
-                />
-              </div>
-              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-                className="input-field py-2 text-sm w-32">
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="trial">Trial</option>
-                <option value="suspended">Suspended</option>
-              </select>
-              <button onClick={() => setShowCreate(true)}
-                className="btn-gold flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg flex-shrink-0">
-                <Plus size={16} />
-                New Tenant
-              </button>
-            </div>
-          </div>
+        {/* ── Tenants Tab ── */}
+        {activeTab === 'tenants' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
 
-          {/* Table */}
-          {loading ? (
-            <div className="text-center py-16 text-gray-400">Loading tenants...</div>
-          ) : tenants.length === 0 ? (
-            <div className="text-center py-16 text-gray-400">No tenants found</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Firm</th>
-                    <th>Plan</th>
-                    <th>Status</th>
-                    <th>Users</th>
-                    <th>Cases</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+            {/* Toolbar */}
+            <div className="p-4 md:p-6 border-b border-gray-100 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-base md:text-lg font-bold text-[#0a0f2e]" style={{ fontFamily: 'Playfair Display' }}>
+                  Law Firms
+                  <span className="ml-1.5 text-xs font-normal text-gray-400">({pagination.total})</span>
+                </h2>
+                <button onClick={() => setShowCreate(true)}
+                  className="btn-gold flex items-center gap-1.5 text-xs md:text-sm px-3 py-2 rounded-lg flex-shrink-0">
+                  <Plus size={14} /> New Tenant
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input value={search} onChange={e => setSearch(e.target.value)}
+                    placeholder="Search firms..." className="input-field pl-9 py-2 text-sm w-full" />
+                </div>
+                <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+                  className="input-field py-2 text-sm w-28 flex-shrink-0">
+                  <option value="">All</option>
+                  <option value="active">Active</option>
+                  <option value="trial">Trial</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Content */}
+            {loading ? (
+              <div className="text-center py-16 text-gray-400 text-sm">Loading tenants...</div>
+            ) : tenants.length === 0 ? (
+              <div className="text-center py-16 text-gray-400 text-sm">No tenants found</div>
+            ) : (
+              <>
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Firm</th><th>Plan</th><th>Status</th>
+                        <th>Users</th><th>Cases</th><th>Created</th><th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tenants.map(tenant => (
+                        <tr key={tenant.id}>
+                          <td>
+                            <div className="font-semibold text-gray-900 text-sm">{tenant.name}</div>
+                            <div className="text-xs text-gray-400">{tenant.email}</div>
+                            {tenant.phone && <div className="text-xs text-gray-400">{tenant.phone}</div>}
+                          </td>
+                          <td>{planBadge(tenant.subscription_plan)}</td>
+                          <td>{statusBadge(tenant.subscription_status)}</td>
+                          <td>
+                            <span className="text-sm text-gray-700">{tenant.user_count}</span>
+                            <span className="text-xs text-gray-400"> / {tenant.max_users}</span>
+                          </td>
+                          <td>
+                            <span className="text-sm text-gray-700">{tenant.case_count}</span>
+                            <span className="text-xs text-gray-400"> / {tenant.max_cases}</span>
+                          </td>
+                          <td className="text-xs text-gray-500">
+                            {new Date(tenant.created_at).toLocaleDateString('en-KE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </td>
+                          <td>
+                            <TenantActions tenant={tenant}
+                              onUsers={() => setSelectedTenantUsers(tenant)}
+                              onEdit={() => setEditingTenant(tenant)}
+                              onActivate={() => handleActivate(tenant)}
+                              onDeactivate={() => handleDeactivate(tenant)}
+                              onDelete={() => setDeletingTenant(tenant)} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile cards */}
+                <div className="md:hidden divide-y divide-gray-50">
                   {tenants.map(tenant => (
-                    <tr key={tenant.id}>
-                      <td>
-                        <div>
-                          <div className="font-semibold text-gray-900 text-sm">{tenant.name}</div>
-                          <div className="text-xs text-gray-400">{tenant.email}</div>
+                    <div key={tenant.id} className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-gray-900 text-sm truncate">{tenant.name}</div>
+                          <div className="text-xs text-gray-400 truncate">{tenant.email}</div>
                           {tenant.phone && <div className="text-xs text-gray-400">{tenant.phone}</div>}
                         </div>
-                      </td>
-                      <td>{planBadge(tenant.subscription_plan)}</td>
-                      <td>{statusBadge(tenant.subscription_status)}</td>
-                      <td>
-                        <span className="text-sm text-gray-700">{tenant.user_count}</span>
-                        <span className="text-xs text-gray-400"> / {tenant.max_users}</span>
-                      </td>
-                      <td>
-                        <span className="text-sm text-gray-700">{tenant.case_count}</span>
-                        <span className="text-xs text-gray-400"> / {tenant.max_cases}</span>
-                      </td>
-                      <td className="text-xs text-gray-500">
-                        {new Date(tenant.created_at).toLocaleDateString('en-KE', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          {/* View users */}
-                          <button
-                            onClick={() => setSelectedTenantUsers(tenant)}
-                            className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                            title="View users & passwords">
-                            <Users size={14} />
-                          </button>
-                          {/* Edit */}
-                          <button
-                            onClick={() => setEditingTenant(tenant)}
-                            className="text-xs text-gray-500 hover:text-gray-700"
-                            title="Edit tenant">
-                            <Edit size={14} />
-                          </button>
-                          {/* Activate / Deactivate */}
-                          {tenant.subscription_status === 'suspended' ? (
-                            <button
-                              onClick={() => handleActivate(tenant)}
-                              className="text-xs text-emerald-600 hover:text-emerald-800 font-medium"
-                              title="Activate tenant">
-                              <CheckCircle size={14} />
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleDeactivate(tenant)}
-                              className="text-xs text-amber-600 hover:text-amber-800 font-medium"
-                              title="Suspend tenant">
-                              <XCircle size={14} />
-                            </button>
-                          )}
-                          {/* Delete */}
-                          <button
-                            onClick={() => setDeletingTenant(tenant)}
-                            className="text-xs text-red-400 hover:text-red-600"
-                            title="Delete tenant">
-                            <Trash2 size={14} />
-                          </button>
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          {statusBadge(tenant.subscription_status)}
+                          {planBadge(tenant.subscription_plan)}
                         </div>
-                      </td>
-                    </tr>
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span><strong className="text-gray-700">{tenant.user_count}</strong>/{tenant.max_users} users</span>
+                        <span><strong className="text-gray-700">{tenant.case_count}</strong>/{tenant.max_cases} cases</span>
+                        <span>{new Date(tenant.created_at).toLocaleDateString('en-KE', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <button onClick={() => setSelectedTenantUsers(tenant)}
+                          className="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100">
+                          Users
+                        </button>
+                        <button onClick={() => setEditingTenant(tenant)}
+                          className="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">
+                          Edit
+                        </button>
+                        {tenant.subscription_status === 'suspended' ? (
+                          <button onClick={() => handleActivate(tenant)}
+                            className="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
+                            Activate
+                          </button>
+                        ) : (
+                          <button onClick={() => handleDeactivate(tenant)}
+                            className="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100">
+                            Suspend
+                          </button>
+                        )}
+                        <button onClick={() => setDeletingTenant(tenant)}
+                          className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                </div>
+              </>
+            )}
 
-          {/* Pagination */}
-          {pagination.pages > 1 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-              <p className="text-sm text-gray-500">
-                Page {pagination.page} of {pagination.pages} — {pagination.total} total
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => fetchAll(pagination.page - 1)}
-                  disabled={pagination.page <= 1}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">
-                  Previous
-                </button>
-                <button
-                  onClick={() => fetchAll(pagination.page + 1)}
-                  disabled={pagination.page >= pagination.pages}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">
-                  Next
-                </button>
+            {/* Pagination */}
+            {pagination.pages > 1 && (
+              <div className="flex items-center justify-between px-4 md:px-6 py-4 border-t border-gray-100">
+                <p className="text-xs md:text-sm text-gray-500">
+                  Page {pagination.page} of {pagination.pages}
+                </p>
+                <div className="flex gap-2">
+                  <button onClick={() => fetchAll(pagination.page - 1)} disabled={pagination.page <= 1}
+                    className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">
+                    Prev
+                  </button>
+                  <button onClick={() => fetchAll(pagination.page + 1)} disabled={pagination.page >= pagination.pages}
+                    className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">
+                    Next
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-        </div>}
+            )}
+          </div>
+        )}
       </main>
 
       {/* Modals */}
-      {showCreate && (
-        <CreateTenantModal
-          onClose={() => setShowCreate(false)}
-          onCreated={() => fetchAll(1)}
-        />
-      )}
-      {selectedTenantUsers && (
-        <TenantUsersModal
-          tenant={selectedTenantUsers}
-          onClose={() => setSelectedTenantUsers(null)}
-        />
-      )}
-      {editingTenant && (
-        <EditTenantModal
-          tenant={editingTenant}
-          onClose={() => setEditingTenant(null)}
-          onUpdated={() => fetchAll(pagination.page)}
-        />
-      )}
-      {deletingTenant && (
-        <DeleteConfirm
-          tenant={deletingTenant}
-          onClose={() => setDeletingTenant(null)}
-          onDeleted={() => { fetchAll(1); setDeletingTenant(null) }}
-        />
-      )}
+      {showCreate && <CreateTenantModal onClose={() => setShowCreate(false)} onCreated={() => fetchAll(1)} />}
+      {selectedTenantUsers && <TenantUsersModal tenant={selectedTenantUsers} onClose={() => setSelectedTenantUsers(null)} />}
+      {editingTenant && <EditTenantModal tenant={editingTenant} onClose={() => setEditingTenant(null)} onUpdated={() => fetchAll(pagination.page)} />}
+      {deletingTenant && <DeleteConfirm tenant={deletingTenant} onClose={() => setDeletingTenant(null)} onDeleted={() => { fetchAll(1); setDeletingTenant(null) }} />}
     </div>
   )
 }
