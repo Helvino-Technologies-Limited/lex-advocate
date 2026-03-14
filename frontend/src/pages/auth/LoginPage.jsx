@@ -97,13 +97,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-            <p className="text-xs text-amber-700 font-semibold mb-2">Demo Credentials:</p>
-            <p className="text-xs text-amber-600">Admin: admin@helvino.co.ke / Admin@2024!</p>
-            <p className="text-xs text-amber-600">Advocate: advocate@helvino.co.ke / Advocate@2024!</p>
-          </div>
-
-          <p className="mt-6 text-center text-sm text-gray-500">
+          <p className="mt-8 text-center text-sm text-gray-500">
             New law firm?{' '}
             <Link to="/register" className="text-[#c9a96e] font-semibold hover:underline">Register your firm</Link>
           </p>
