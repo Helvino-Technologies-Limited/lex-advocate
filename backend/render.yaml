@@ -3,7 +3,7 @@ services:
     name: lex-advocate-api
     env: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm install && node src/database/migrate.js && node src/database/seed.js
     startCommand: npm start
     healthCheckPath: /health
     envVars:
@@ -15,12 +15,16 @@ services:
         sync: false
       - key: JWT_REFRESH_SECRET
         sync: false
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
       - key: FRONTEND_URL
-        sync: false
+        value: https://advocate-lyart.vercel.app
       - key: SMTP_HOST
         value: smtp.gmail.com
       - key: SMTP_PORT
-        value: 587
+        value: "587"
       - key: SMTP_USER
         sync: false
       - key: SMTP_PASS
