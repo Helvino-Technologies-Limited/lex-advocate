@@ -20,7 +20,9 @@ export default function MessagesPage() {
     queryKey: ['messages', selectedUser?.id],
     queryFn: () => messagesApi.getAll({ recipient_id: selectedUser?.id }).then(r => r.data.data),
     enabled: !!selectedUser,
-    refetchInterval: 5000
+    refetchInterval: 5000,
+    retry: false,
+    refetchIntervalInBackground: false
   })
 
   const sendMutation = useMutation({
@@ -39,7 +41,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-10rem)] flex gap-4 animate-fade-in">
+    <div className="h-[calc(100dvh-7.5rem)] md:h-[calc(100dvh-10rem)] flex gap-4 animate-fade-in">
       <div className="w-72 flex-shrink-0 card overflow-hidden flex flex-col">
         <div className="p-4 border-b border-gray-100">
           <h2 className="font-bold text-gray-900" style={{ fontFamily: 'Playfair Display' }}>Messages</h2>

@@ -195,3 +195,22 @@ tbody tr:hover { background: #fdf8f0; }
 tbody td { padding: 14px 16px; font-size: 14px; color: #374151; }
 
 .skeleton { background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%); background-size: 200% 100%; animation: shimmer 2s infinite; border-radius: 6px; }
+
+/* ── Mobile / bottom-nav utilities ─────────────────────────────── */
+@keyframes slideUpDrawer {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* Tap highlight suppression for mobile nav */
+.mobile-tab { -webkit-tap-highlight-color: transparent; }
+
+/* Active nav pill on bottom bar */
+.bottom-nav-active { color: #c9a96e; }
+
+/* Cards on mobile get slightly more breathing room */
+@media (max-width: 767px) {
+  .card { border-radius: 16px; }
+  h1.text-2xl { font-size: 1.35rem; }
+  .btn-gold { padding: 0.55rem 1.1rem; font-size: 0.8rem; }
+}
