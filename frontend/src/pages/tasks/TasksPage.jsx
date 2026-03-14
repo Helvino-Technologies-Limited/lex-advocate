@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, CheckSquare } from 'lucide-react'
+import { Plus, Search, CheckSquare, ChevronDown } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { tasksApi, casesApi, usersApi } from '../../lib/api'
@@ -31,18 +31,44 @@ const STATUS_COLS = [
 ]
 
 function StatusDropdown({ taskId, current, onUpdate }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
   const opt = STATUS_OPTIONS.find(s => s.value === current) || STATUS_OPTIONS[0]
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
   return (
-    <select
-      value={current}
-      onChange={e => onUpdate(taskId, e.target.value)}
-      onClick={e => e.stopPropagation()}
-      className={`text-xs font-semibold px-2 py-0.5 rounded-full border-0 cursor-pointer outline-none ${opt.color}`}
-    >
-      {STATUS_OPTIONS.map(s => (
-        <option key={s.value} value={s.value}>{s.label}</option>
-      ))}
-    </select>
+    <div ref={ref} className="relative inline-block" onClick={e => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full cursor-pointer whitespace-nowrap ${opt.color}`}
+      >
+        {opt.label}
+        <ChevronDown size={11} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full mt-1 z-50 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-w-[130px]">
+          {STATUS_OPTIONS.map(s => (
+            <button
+              key={s.value}
+              type="button"
+              onClick={() => { onUpdate(taskId, s.value); setOpen(false) }}
+              className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-gray-50 flex items-center gap-2 ${s.value === current ? 'opacity-50' : ''}`}
+            >
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${s.color.split(' ')[0]}`} />
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
