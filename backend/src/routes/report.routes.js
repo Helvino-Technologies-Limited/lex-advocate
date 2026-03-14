@@ -60,4 +60,51 @@ router.get('/cases', authenticate, async (req, res) => {
   }
 });
 
+// Detailed data for PDF export
+router.get('/detailed', authenticate, authorize('admin', 'accountant'), async (req, res) => {
+  const { startDate, endDate } = req.query;
+  const tenantId = req.user.tenantId;
+  try {
+    const start = startDate || new Date(new Date().getFullYear(), 0, 1).toISOString();
+    const end = endDate || new Date().toISOString();
+
+    const [invoices, payments, expenses, tenant] = await Promise.all([
+      query(`SELECT i.invoice_number, i.invoice_date, i.due_date, i.status, i.total_amount, i.amount_paid, i.balance_due,
+                    i.billing_type, cl.first_name, cl.last_name, cl.organization_name, c.case_number
+             FROM invoices i
+             LEFT JOIN clients cl ON i.client_id = cl.id
+             LEFT JOIN cases c ON i.case_id = c.id
+             WHERE i.tenant_id = $1 AND i.created_at BETWEEN $2 AND $3
+             ORDER BY i.created_at DESC`, [tenantId, start, end]),
+
+      query(`SELECT p.amount, p.payment_method, p.mpesa_code, p.transaction_id, p.payment_date, p.notes,
+                    i.invoice_number, cl.first_name, cl.last_name, cl.organization_name
+             FROM payments p
+             LEFT JOIN invoices i ON p.invoice_id = i.id
+             LEFT JOIN clients cl ON p.client_id = cl.id
+             WHERE p.tenant_id = $1 AND p.status = 'completed' AND p.payment_date BETWEEN $2 AND $3
+             ORDER BY p.payment_date DESC`, [tenantId, start, end]),
+
+      query(`SELECT e.description, e.category, e.amount, e.expense_date, e.is_billable, e.is_billed,
+                    c.case_number
+             FROM expenses e
+             LEFT JOIN cases c ON e.case_id = c.id
+             WHERE e.tenant_id = $1 AND e.expense_date BETWEEN $2 AND $3
+             ORDER BY e.expense_date DESC`, [tenantId, start, end]),
+
+      query(`SELECT name, email, phone, address FROM tenants WHERE id = $1`, [tenantId])
+    ]);
+
+    return successResponse(res, {
+      invoices: invoices.rows,
+      payments: payments.rows,
+      expenses: expenses.rows,
+      firm: tenant.rows[0] || {},
+      period: { start, end }
+    });
+  } catch (error) {
+    return errorResponse(res, 'Failed to get detailed report', 500);
+  }
+});
+
 module.exports = router;

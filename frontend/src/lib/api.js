@@ -105,8 +105,11 @@ export const billingApi = {
   getInvoice: (id) => api.get(`/billing/invoices/${id}`),
   createInvoice: (data) => api.post('/billing/invoices', data),
   updateInvoiceStatus: (id, status) => api.patch(`/billing/invoices/${id}/status`, { status }),
+  sendInvoice: (id, data) => api.post(`/billing/invoices/${id}/send`, data),
   recordPayment: (data) => api.post('/billing/payments', data),
   getPayments: (params) => api.get('/billing/payments', { params }),
+  getPaymentReceipt: (id) => api.get(`/billing/payments/${id}/receipt`),
+  sendPaymentReceipt: (id, data) => api.post(`/billing/payments/${id}/send-receipt`, data),
   getExpenses: (params) => api.get('/billing/expenses', { params }),
   addExpense: (data) => api.post('/billing/expenses', data),
   getTimeEntries: (params) => api.get('/billing/time-entries', { params }),
@@ -121,7 +124,8 @@ export const dashboardApi = {
 // Reports
 export const reportsApi = {
   getFinancial: (params) => api.get('/reports/financial', { params }),
-  getCases: () => api.get('/reports/cases')
+  getCases: () => api.get('/reports/cases'),
+  getDetailed: (params) => api.get('/reports/detailed', { params })
 }
 
 // Users
